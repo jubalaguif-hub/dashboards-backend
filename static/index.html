@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Planilhas e Categorias</title>
+  <!-- cache-busting simples para sempre carregar o CSS mais recente -->
+  <link rel="stylesheet" href="/style.css?v=2">
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="edit" viewBox="0 0 24 24">
+      <path d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"/>
+    </symbol>
+    <symbol id="delete" viewBox="0 0 24 24">
+      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+    </symbol>
+    <symbol id="plus" viewBox="0 0 24 24">
+      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+    </symbol>
+    <symbol id="settings" viewBox="0 0 24 24">
+      <path d="M19.14,12.94a7.14,7.14,0,0,0,.05-.94,7.14,7.14,0,0,0-.05-.94l2.11-1.65a.5.5,0,0,0,.12-.63l-2-3.46a.5.5,0,0,0-.6-.22l-2.49,1a6.93,6.93,0,0,0-1.63-.94l-.38-2.65A.5.5,0,0,0,13.25,2h-4.5a.5.5,0,0,0-.49.42L7.88,5.07a6.93,6.93,0,0,0-1.63.94l-2.49-1a.5.5,0,0,0-.6.22l-2,3.46a.5.5,0,0,0,.12.63L3.39,11.06a7.14,7.14,0,0,0-.05.94,7.14,7.14,0,0,0,.05.94L1.28,14.59a.5.5,0,0,0-.12.63l2,3.46a.5.5,0,0,0,.6.22l2.49-1a6.93,6.93,0,0,0,1.63.94l.38,2.65a.5.5,0,0,0,.49.42h4.5a.5.5,0,0,0,.49-.42l.38-2.65a6.93,6.93,0,0,0,1.63-.94l2.49,1a.5.5,0,0,0,.6-.22l2-3.46a.5.5,0,0,0-.12-.63Zm-7.89,1.56A2.5,2.5,0,1,1,13.75,12,2.5,2.5,0,0,1,11.25,14.5Z"/>
+    </symbol>
+  </svg>
+
+  <div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <img src="/img/Logo.png" alt="Hospital Odilson Behrens" class="logo-img" onerror="this.style.display='none'">
+      </div>
+      <input class="search" type="text" placeholder="Pesquisa">
+      <div class="menu">
+        <div class="menu-item">
+          <svg width="24" height="24" viewBox="0 0 24 24" style="fill:#F4A623">
+            <rect x="3" y="13" width="3" height="8" rx="0.5"/>
+            <rect x="10.5" y="5" width="3" height="16" rx="0.5"/>
+            <rect x="18" y="9" width="3" height="12" rx="0.5"/>
+          </svg>
+          Dashboards
+        </div>
+        <div class="menu-separator"></div>
+        <div id="sidebar-categorias" class="sidebar-categorias"></div>
+      </div>
+      <div class="sidebar-actions">
+        <button class="sidebar-edit" title="Editar"><svg width="20" height="20"><use href="#edit" /></svg></button>
+        <button class="sidebar-add" title="Adicionar">+</button>
+        <button class="sidebar-delete" title="Excluir"><svg width="20" height="20"><use href="#delete" /></svg></button>
+      </div>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content">
+      <!-- Modal de Escolha (Criar Categoria ou Planilha) -->
+      <div id="modal-choice-bg" class="modal-bg" style="display:none">
+        <div class="modal modal-choice">
+          <button class="modal-close" id="modal-choice-close" title="Fechar">&times;</button>
+          <h3 id="modal-choice-titulo">O que você deseja criar?</h3>
+          <div class="modal-choice-buttons">
+            <button type="button" class="btn-choice" id="btn-criar-categoria">
+              <span class="choice-icon">📁</span>
+              <span class="choice-text">Nova Categoria</span>
+            </button>
+            <button type="button" class="btn-choice" id="btn-criar-planilha">
+              <span class="choice-icon">📊</span>
+              <span class="choice-text">Nova Planilha</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Edição/Deleção -->
+      <div id="modal-bg" class="modal-bg" style="display:none">
+        <div class="modal">
+          <button class="modal-close" id="modal-close" title="Fechar">&times;</button>
+          <h3 id="modal-titulo">Editar</h3>
+          <form id="modal-form">
+            <div class="modal-campos"></div>
+            <div class="modal-botoes">
+              <button type="submit" class="modal-salvar">Salvar</button>
+              <button type="button" class="modal-cancelar">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Seção de Planilhas -->
+      <section class="planilhas">
+        <div class="planilhas-header">
+          <h2>Suas Planilhas</h2>
+          <p class="planilhas-subtitle">Organize, acesse e gerencie suas planilhas</p>
+        </div>
+
+        <!-- Formulário Colapsável (opcional na versão visual) -->
+        <div class="form-container">
+          <form id="form-planilha">
+            <div class="form-group">
+              <input type="text" id="titulo-planilha" placeholder="Nome da planilha" required>
+            </div>
+            <div class="form-group">
+              <input type="url" id="url-planilha" placeholder="Cole a URL do Google Sheets" required>
+            </div>
+            <div class="form-group">
+              <select id="categoria-planilha">
+                <option value="">Selecione uma categoria</option>
+              </select>
+            </div>
+            <button type="submit" class="btn-add-planilha">Adicionar Planilha</button>
+          </form>
+        </div>
+
+        <!-- Grid de Planilhas -->
+        <div id="lista-planilhas" class="cards-grid">
+          <!-- Cards de planilhas carregados aqui -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Config de ambiente da API (deixe vazio para usar o mesmo host do back-end Flask local) -->
+  <script>
+    // Em produção (GitHub Pages + back-end externo), defina assim, por exemplo:
+    // window.API_BASE_URL = 'https://seu-backend.onrender.com';
+    window.API_BASE_URL = window.API_BASE_URL || '';
+  </script>
+  <!-- cache-busting simples para garantir JS atualizado -->
+  <script src="/app.js?v=2"></script>
+</body>
+</html>
