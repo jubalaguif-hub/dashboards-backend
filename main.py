@@ -11,7 +11,7 @@ import functools
 CORS_ORIGINS = '*'
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ==================== FRONTEND ====================
 # Rota para servir a página principal
