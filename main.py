@@ -2,7 +2,7 @@
 # ==================== IMPORTS E APP ====================
 from flask import Flask, request, jsonify, Response, send_from_directory, render_template_string
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 import json
 import os
 from datetime import datetime
@@ -41,7 +41,7 @@ def atualizar_categorias_planilha(planilha_id):
         planilhas[idx]['atualizado_em'] = datetime.now().isoformat()
         salvar_planilhas(planilhas)
         # Emitir evento WebSocket para atualizar todos os clientes
-        socketio.emit('planilha_editada', {'dado': planilhas[idx]}, broadcast=True)
+        socketio.emit('planilha_editada', {'dado': planilhas[idx]})
         return jsonify({'sucesso': True, 'mensagem': 'Categorias da planilha atualizadas', 'dado': planilhas[idx]}), 200
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao atualizar categorias da planilha: {str(e)}'}), 500
@@ -62,7 +62,7 @@ def remover_categoria_de_planilhas(categoria_id):
     if len(planilhas_filtradas) != total_antes:
         salvar_planilhas(planilhas_filtradas)
         # Emitir evento WebSocket para atualizar todos os clientes quando planilhas são removidas
-        socketio.emit('planilhas_atualizadas', {}, broadcast=True)
+        socketio.emit('planilhas_atualizadas', {})
 
 
 # ==================== CATEGORIAS ====================
@@ -96,7 +96,7 @@ def criar_categoria():
         categorias.append(nova)
         salvar_categorias(categorias)
         # Emitir evento WebSocket para atualizar todos os clientes
-        socketio.emit('categoria_criada', {'dado': nova}, broadcast=True)
+        socketio.emit('categoria_criada', {'dado': nova})
         return jsonify({'sucesso': True, 'mensagem': 'Categoria criada com sucesso', 'dado': nova}), 201
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao criar categoria: {str(e)}'}), 500
@@ -117,7 +117,7 @@ def editar_categoria(categoria_id):
         categorias[idx]['atualizado_em'] = datetime.now().isoformat()
         salvar_categorias(categorias)
         # Emitir evento WebSocket para atualizar todos os clientes
-        socketio.emit('categoria_editada', {'dado': categorias[idx]}, broadcast=True)
+        socketio.emit('categoria_editada', {'dado': categorias[idx]})
         return jsonify({'sucesso': True, 'mensagem': 'Categoria atualizada com sucesso', 'dado': categorias[idx]}), 200
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao editar categoria: {str(e)}'}), 500
@@ -135,7 +135,7 @@ def deletar_categoria(categoria_id):
         # Remover referência da categoria das planilhas
         remover_categoria_de_planilhas(categoria_id)
         # Emitir evento WebSocket para atualizar todos os clientes
-        socketio.emit('categoria_deletada', {'id': categoria_id}, broadcast=True)
+        socketio.emit('categoria_deletada', {'id': categoria_id})
         return jsonify({'sucesso': True, 'mensagem': 'Categoria deletada com sucesso', 'dado': removida}), 200
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao deletar categoria: {str(e)}'}), 500
@@ -244,7 +244,7 @@ def criar_planilha():
         planilhas.append(nova)
         salvar_planilhas(planilhas)
         # Emitir evento WebSocket para atualizar todos os clientes
-        socketio.emit('planilha_criada', {'dado': nova}, broadcast=True)
+        socketio.emit('planilha_criada', {'dado': nova})
         return jsonify({'sucesso': True, 'mensagem': 'Planilha criada com sucesso', 'dado': nova}), 201
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao criar planilha: {str(e)}'}), 500
@@ -267,7 +267,7 @@ def editar_planilha(planilha_id):
         planilhas[idx]['atualizado_em'] = datetime.now().isoformat()
         salvar_planilhas(planilhas)
         # Emitir evento WebSocket para atualizar todos os clientes
-        socketio.emit('planilha_editada', {'dado': planilhas[idx]}, broadcast=True)
+        socketio.emit('planilha_editada', {'dado': planilhas[idx]})
         return jsonify({'sucesso': True, 'mensagem': 'Planilha atualizada com sucesso', 'dado': planilhas[idx]}), 200
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao editar planilha: {str(e)}'}), 500
@@ -285,7 +285,7 @@ def deletar_planilha(planilha_id):
         removida = planilhas.pop(idx)
         salvar_planilhas(planilhas)
         # Emitir evento WebSocket para atualizar todos os clientes
-        socketio.emit('planilha_deletada', {'id': planilha_id}, broadcast=True)
+        socketio.emit('planilha_deletada', {'id': planilha_id})
         return jsonify({'sucesso': True, 'mensagem': 'Planilha deletada com sucesso', 'dado': removida}), 200
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao deletar planilha: {str(e)}'}), 500
