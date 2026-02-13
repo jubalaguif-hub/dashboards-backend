@@ -8,7 +8,7 @@ Repositório: `https://github.com/jubalaguif-hub/dashboards-backend`
 
 ## Tecnologias
 
-- Python 3.11+ (recomendado: 3.11.7)
+- Python 3.11+ (compatível com 3.14)
 - Flask
 - Flask-CORS
 - Flask-SocketIO (atualizações em tempo real via WebSocket)
@@ -113,7 +113,7 @@ Este projeto foi preparado para rodar no [Render](https://render.com/).
 - **Start Command**
 
   ```bash
-  gunicorn --worker-class gevent --worker-connections 1000 -w 1 main:app
+  socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
   ```
 
   **Nota:** O uso de `gevent` é necessário para suportar WebSockets. O parâmetro `-w 1` limita a um worker para evitar problemas de concorrência com arquivos JSON. `--worker-connections 1000` permite múltiplas conexões WebSocket simultâneas.
@@ -146,5 +146,6 @@ O front-end (repositório `dashboards-frontend`) configura a URL da API em `inde
 ```
 
 Assim, qualquer usuário acessando o GitHub Pages do front consome os dados desta API.
+
 
 
