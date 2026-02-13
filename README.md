@@ -107,7 +107,7 @@ Este projeto foi preparado para rodar no [Render](https://render.com/).
 Depois do deploy, a API fica acessível em:
 
 ```text
-Colocar URL
+https://dashboards-backend-m8mv.onrender.com
 ```
 
 Exemplo de teste:
@@ -125,9 +125,10 @@ O front-end (repositório `dashboards-frontend`) configura a URL da API em `inde
 ```html
 <script>
   // Backend publicado no Render
-  window.API_BASE_URL = 'TROCAR';
+  window.API_BASE_URL = 'https://dashboards-backend-m8mv.onrender.com';
 </script>
 ```
 
 Assim, qualquer usuário acessando o GitHub Pages do front consome os dados desta API.
+
 
