@@ -182,6 +182,22 @@ def criar_categoria():
 @app.route('/api/categorias/<int:categoria_id>', methods=['PUT'])
 def editar_categoria(categoria_id):
     try:
+        if USING_DB:
+            # Quando usa banco de dados, atualiza direto sem perder associações
+            categoria = Categoria.query.get(categoria_id)
+            if not categoria:
+                return jsonify({'sucesso': False, 'mensagem': f'Categoria com ID {categoria_id} não encontrada'}), 404
+            atualizados = request.get_json()
+            if not atualizados:
+                return jsonify({'sucesso': False, 'mensagem': 'Nenhum dado fornecido para atualização'}), 400
+            if 'nome' in atualizados:
+                categoria.nome = atualizados['nome']
+            categoria.atualizado_em = datetime.utcnow()
+            db.session.commit()
+            socketio.emit('categoria_atualizada', {'id': categoria_id, 'dados': categoria.to_dict()})
+            return jsonify({'sucesso': True, 'mensagem': 'Categoria atualizada com sucesso', 'dado': categoria.to_dict()}), 200
+        
+        # Fallback para arquivos JSON
         categorias = carregar_categorias()
         idx = next((i for i, c in enumerate(categorias) if c['id'] == categoria_id), None)
         if idx is None:
@@ -413,6 +429,26 @@ def criar_planilha():
 def editar_planilha(planilha_id):
     """Edita uma planilha existente"""
     try:
+        if USING_DB:
+            # Quando usa banco de dados, atualiza direto sem perder categorias
+            planilha = Planilha.query.get(planilha_id)
+            if not planilha:
+                return jsonify({'sucesso': False, 'mensagem': f'Planilha com ID {planilha_id} não encontrada'}), 404
+            atualizados = request.get_json()
+            if not atualizados:
+                return jsonify({'sucesso': False, 'mensagem': 'Nenhum dado fornecido para atualização'}), 400
+            if 'titulo' in atualizados:
+                planilha.titulo = atualizados['titulo']
+            if 'url' in atualizados:
+                planilha.url = atualizados['url']
+            if 'imagem' in atualizados:
+                planilha.imagem = atualizados['imagem']
+            planilha.atualizado_em = datetime.utcnow()
+            db.session.commit()
+            socketio.emit('planilha_editada', {'dado': planilha.to_dict()})
+            return jsonify({'sucesso': True, 'mensagem': 'Planilha atualizada com sucesso', 'dado': planilha.to_dict()}), 200
+        
+        # Fallback para arquivos JSON
         planilhas = carregar_planilhas()
         idx = next((i for i, p in enumerate(planilhas) if p['id'] == planilha_id), None)
         if idx is None:
