@@ -134,6 +134,57 @@ https://dashboards-backend-1o4j.onrender.com/api/teste
 
 ---
 
+## Configurar PostgreSQL (Render)
+
+Se você criou um banco PostgreSQL no Render, adicione a variável de ambiente `DATABASE_URL` no painel do serviço (Environment → Environment Variables). Use a connection string fornecida pelo Render, por exemplo:
+
+```
+postgresql://admin:UKDds98V5s7BbXfSxMHo5XMYyqixfcj0@dpg-d6auho0boq4c73dlca90-a.virginia-postgres.render.com/planilhas_db
+```
+
+Notas importantes:
+- O código já converte automaticamente `postgres://` para `postgresql://` quando necessário.
+- Ao iniciar com `DATABASE_URL` presente, o back-end criará as tabelas automaticamente usando SQLAlchemy.
+- Não comite credenciais no repositório.
+
+## Migrar dados JSON locais para o banco
+
+Após adicionar `DATABASE_URL` e realizar o redeploy do serviço no Render, importe os dados locais (`categorias.json` e `dados.json`) para o banco executando o endpoint de migração:
+
+Requisição (exemplo):
+
+```bash
+curl -X POST https://<seu-app>.onrender.com/api/migrate -H "Content-Type: application/json"
+```
+
+O endpoint retornará um JSON indicando quantas categorias e planilhas foram importadas.
+
+## Testes e verificação
+
+- Verificar se a API está no ar:
+
+```bash
+curl https://<seu-app>.onrender.com/api/teste
+```
+
+- Listar categorias (após a migração):
+
+```bash
+curl https://<seu-app>.onrender.com/api/categorias
+```
+
+## Testar localmente com o mesmo banco
+
+No Windows PowerShell você pode definir a variável de ambiente e iniciar a app localmente:
+
+```powershell
+$env:DATABASE_URL = 'postgresql://admin:...@.../planilhas_db'
+python main.py
+```
+
+Isso faz com que a aplicação use o PostgreSQL remoto localmente (útil para testes). Se `DATABASE_URL` não estiver definida, a aplicação continuará usando os arquivos `dados.json` e `categorias.json` como fallback.
+
+
 ## Integração com o front-end
 
 O front-end (repositório `dashboards-frontend`) configura a URL da API em `index.html`:
