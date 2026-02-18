@@ -2,6 +2,7 @@
 # ==================== IMPORTS E APP ====================
 from flask import Flask, request, jsonify, Response, send_from_directory, render_template_string
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 import json
 import os
@@ -11,6 +12,23 @@ import functools
 CORS_ORIGINS = '*'
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
+
+# ==================== CONFIGURAÇÃO DO BANCO ====================
+
+import urllib.parse
+
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# ==================== SOCKET ====================
+
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ==================== FRONTEND ====================
