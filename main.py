@@ -25,6 +25,14 @@ if database_url and database_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Configuração de Pool de Conexões para melhor performance
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'pool_recycle': 3600,
+    'pool_pre_ping': True,
+    'max_overflow': 20,
+}
+
 db = SQLAlchemy(app)
 
 # ==================== SOCKET ====================
@@ -38,8 +46,8 @@ USING_DB = bool(database_url)
 if USING_DB:
     planilha_categoria = db.Table(
         'planilha_categoria',
-        db.Column('planilha_id', db.Integer, db.ForeignKey('planilhas.id'), primary_key=True),
-        db.Column('categoria_id', db.Integer, db.ForeignKey('categorias.id'), primary_key=True)
+        db.Column('planilha_id', db.Integer, db.ForeignKey('planilhas.id', ondelete='CASCADE'), primary_key=True),
+        db.Column('categoria_id', db.Integer, db.ForeignKey('categorias.id', ondelete='CASCADE'), primary_key=True)
     )
 
     class Categoria(db.Model):
@@ -251,7 +259,9 @@ def salvar_planilhas(planilhas):
     if USING_DB:
         # Substitui todas as planilhas no banco pelos dados fornecidos.
         try:
-            # Apaga todas as planilhas (associações serão limpas automaticamente)
+            # Apaga todas as associações primeiro (antes de deletar as planilhas)
+            db.session.execute(db.delete(planilha_categoria))
+            # Depois apaga todas as planilhas
             Planilha.query.delete()
             db.session.commit()
             for p in planilhas:
@@ -299,6 +309,9 @@ def carregar_categorias():
 def salvar_categorias(categorias):
     if USING_DB:
         try:
+            # Apaga todas as associações primeiro (antes de deletar as categorias)
+            db.session.execute(db.delete(planilha_categoria))
+            # Depois apaga todas as categorias
             Categoria.query.delete()
             db.session.commit()
             for c in categorias:
