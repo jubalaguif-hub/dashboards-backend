@@ -4,3 +4,6 @@ flask-socketio==5.3.5
 python-socketio==5.10.0
 Werkzeug==2.3.7
 gunicorn==23.0.0
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.25
