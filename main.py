@@ -31,6 +31,57 @@ db = SQLAlchemy(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+# Detecta se devemos usar o banco de dados (DATABASE_URL fornecido)
+USING_DB = bool(database_url)
+
+# ======= MODELS (quando USING_DB == True) =======
+if USING_DB:
+    planilha_categoria = db.Table(
+        'planilha_categoria',
+        db.Column('planilha_id', db.Integer, db.ForeignKey('planilhas.id'), primary_key=True),
+        db.Column('categoria_id', db.Integer, db.ForeignKey('categorias.id'), primary_key=True)
+    )
+
+    class Categoria(db.Model):
+        __tablename__ = 'categorias'
+        id = db.Column(db.Integer, primary_key=True)
+        nome = db.Column(db.String(255), nullable=False)
+        criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+        atualizado_em = db.Column(db.DateTime, onupdate=datetime.utcnow)
+
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'nome': self.nome,
+                'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+                'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None
+            }
+
+    class Planilha(db.Model):
+        __tablename__ = 'planilhas'
+        id = db.Column(db.Integer, primary_key=True)
+        titulo = db.Column(db.String(255), nullable=False)
+        url = db.Column(db.String(2048), nullable=False)
+        imagem = db.Column(db.String(2048), nullable=True)
+        criado_em = db.Column(db.DateTime, default=datetime.utcnow)
+        atualizado_em = db.Column(db.DateTime, onupdate=datetime.utcnow)
+        categorias = db.relationship('Categoria', secondary=planilha_categoria, lazy='subquery', backref=db.backref('planilhas', lazy=True))
+
+        def to_dict(self):
+            return {
+                'id': self.id,
+                'titulo': self.titulo,
+                'url': self.url,
+                'imagem': self.imagem,
+                'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+                'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None,
+                'categorias': [c.id for c in self.categorias]
+            }
+
+    # Cria as tabelas automaticamente (seguro na inicialização)
+    with app.app_context():
+        db.create_all()
+
 # ==================== FRONTEND ====================
 # Rota para servir a página principal
 @app.route('/')
@@ -176,11 +227,17 @@ CATEGORIAS_FILE = 'categorias.json'
 
 # Funções utilitárias para planilhas
 def carregar_planilhas():
-    """Carrega a lista de planilhas a partir do arquivo JSON.
+    """Carrega planilhas.
 
-    Em caso de arquivo inexistente ou JSON inválido, retorna uma lista vazia
-    em vez de quebrar o servidor.
+    Se `USING_DB` for True, carrega do banco via SQLAlchemy; caso contrário
+    carrega do arquivo JSON antigo para manter compatibilidade.
     """
+    if USING_DB:
+        try:
+            return [p.to_dict() for p in Planilha.query.order_by(Planilha.id).all()]
+        except Exception:
+            return []
+
     if not os.path.exists(PLANILHAS_FILE):
         return []
 
@@ -188,20 +245,48 @@ def carregar_planilhas():
         with open(PLANILHAS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except json.JSONDecodeError:
-        # Arquivo corrompido ou vazio: faz fallback seguro
         return []
 
 def salvar_planilhas(planilhas):
+    if USING_DB:
+        # Substitui todas as planilhas no banco pelos dados fornecidos.
+        try:
+            # Apaga todas as planilhas (associações serão limpas automaticamente)
+            Planilha.query.delete()
+            db.session.commit()
+            for p in planilhas:
+                categorias_ids = p.get('categorias', []) or []
+                nova = Planilha(
+                    id=p.get('id'),
+                    titulo=p.get('titulo'),
+                    url=p.get('url'),
+                    imagem=p.get('imagem') if 'imagem' in p else None,
+                )
+                # associa categorias existentes
+                for cid in categorias_ids:
+                    cat = Categoria.query.get(cid)
+                    if cat:
+                        nova.categorias.append(cat)
+                db.session.add(nova)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return
+
     with open(PLANILHAS_FILE, 'w', encoding='utf-8') as f:
         json.dump(planilhas, f, ensure_ascii=False, indent=2)
 
 # Funções utilitárias para categorias
 def carregar_categorias():
-    """Carrega a lista de categorias a partir do arquivo JSON.
-
-    Em caso de arquivo inexistente ou JSON inválido, retorna uma lista vazia
-    em vez de quebrar o servidor.
+    """Carrega categorias. Se `USING_DB` for True, consulta o banco.
+    Caso contrário, faz fallback para o arquivo JSON.
     """
+    if USING_DB:
+        try:
+            return [c.to_dict() for c in Categoria.query.order_by(Categoria.id).all()]
+        except Exception:
+            return []
+
     if not os.path.exists(CATEGORIAS_FILE):
         return []
 
@@ -209,12 +294,54 @@ def carregar_categorias():
         with open(CATEGORIAS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except json.JSONDecodeError:
-        # Arquivo corrompido ou vazio: faz fallback seguro
         return []
 
 def salvar_categorias(categorias):
+    if USING_DB:
+        try:
+            Categoria.query.delete()
+            db.session.commit()
+            for c in categorias:
+                nova = Categoria(id=c.get('id'), nome=c.get('nome'))
+                # tenta preservar timestamps se existirem
+                if 'criado_em' in c and c['criado_em']:
+                    try:
+                        nova.criado_em = datetime.fromisoformat(c['criado_em'])
+                    except Exception:
+                        pass
+                db.session.add(nova)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return
+
     with open(CATEGORIAS_FILE, 'w', encoding='utf-8') as f:
         json.dump(categorias, f, ensure_ascii=False, indent=2)
+
+
+# Endpoint auxiliar: migra os arquivos JSON atuais para o banco (quando aplicável)
+@app.route('/api/migrate', methods=['POST'])
+def migrate_json_to_db():
+    if not USING_DB:
+        return jsonify({'sucesso': False, 'mensagem': 'DATABASE_URL não configurado; migração não necessária'}), 400
+    try:
+        # importa categorias
+        raw_cats = []
+        if os.path.exists(CATEGORIAS_FILE):
+            with open(CATEGORIAS_FILE, 'r', encoding='utf-8') as f:
+                raw_cats = json.load(f) or []
+        # importa planilhas
+        raw_pls = []
+        if os.path.exists(PLANILHAS_FILE):
+            with open(PLANILHAS_FILE, 'r', encoding='utf-8') as f:
+                raw_pls = json.load(f) or []
+
+        # Salva categorias e planilhas usando as funções DB-aware
+        salvar_categorias(raw_cats)
+        salvar_planilhas(raw_pls)
+        return jsonify({'sucesso': True, 'mensagem': 'Migração concluída', 'categorias': len(raw_cats), 'planilhas': len(raw_pls)}), 200
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro na migração: {str(e)}'}), 500
 
 # ==================== ROTAS ====================
 
